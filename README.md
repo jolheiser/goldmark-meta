@@ -2,12 +2,12 @@ goldmark-meta
 =========================
 [![GoDev][godev-image]][godev-url]
 
-[godev-image]: https://pkg.go.dev/badge/github.com/yuin/goldmark-meta
-[godev-url]: https://pkg.go.dev/github.com/yuin/goldmark-meta
+[godev-image]: https://pkg.go.dev/badge/github.com/jolheiser/goldmark-meta
+[godev-url]: https://pkg.go.dev/github.com/jolheiser/goldmark-meta
 
 
 goldmark-meta is an extension for the [goldmark](http://github.com/yuin/goldmark) 
-that allows you to define document metadata in YAML format.
+that allows you to define document metadata in TOML format.
 
 Usage
 --------------------
@@ -15,34 +15,32 @@ Usage
 ### Installation
 
 ```
-go get github.com/yuin/goldmark-meta
+go get github.com/jolheiser/goldmark-meta
 ```
 
 ### Markdown syntax
 
-YAML metadata block is a leaf block that can not have any markdown element
+TOML metadata block is a leaf block that can not have any markdown element
 as a child.
 
-YAML metadata must start with a **YAML metadata separator**.
+TOML metadata must start with a **TOML metadata separator**.
 This separator must be at first line of the document.
 
-A **YAML metadata separator** is a line that only `-` is repeated.
+A **TOML metadata separator** is a line that only `+` is repeated.
 
-YAML metadata must end with a **YAML metadata separator**.
+TOML metadata must end with a **TOML metadata separator**.
 
 You can define objects as a 1st level item. At deeper level, you can define 
-any kind of YAML element.
+any kind of TOML element.
 
 Example:
 
-```
----
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-    - markdown
-    - goldmark
----
+```toml
++++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 
 # Heading 1
 ```
@@ -57,7 +55,7 @@ import (
     "github.com/yuin/goldmark"
     "github.com/yuin/goldmark/extension"
     "github.com/yuin/goldmark/parser"
-    "github.com/yuin/goldmark-meta"
+    "github.com/jolheiser/goldmark-meta"
 )
 
 func main() {
@@ -66,13 +64,11 @@ func main() {
             meta.Meta,
         ),
     )
-    source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-    - markdown
-    - goldmark
----
+    source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 
 # Hello goldmark-meta
 `
@@ -98,7 +94,7 @@ import (
     "github.com/yuin/goldmark/extension"
     "github.com/yuin/goldmark/parser"
     "github.com/yuin/goldmark/text"
-    "github.com/yuin/goldmark-meta"
+    "github.com/jolheiser/goldmark-meta"
 )
 
 func main() {
@@ -109,13 +105,11 @@ func main() {
 			),
 		),
 	)
-	source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-    - markdown
-    - goldmark
----
+	source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 `
 
 	document := markdown.Parser().Parse(text.NewReader([]byte(source)))
@@ -139,7 +133,7 @@ import (
     "github.com/yuin/goldmark/parser"
     "github.com/yuin/goldmark/renderer"
     "github.com/yuin/goldmark/util"
-    "github.com/yuin/goldmark-meta"
+    "github.com/jolheiser/goldmark-meta"
 )
 
 func main() {
@@ -160,13 +154,11 @@ func main() {
     //         extension.Table,
     //     ),
     // )
-    source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-    - markdown
-    - goldmark
----
+    source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 
 # Hello goldmark-meta
 `

@@ -2,6 +2,7 @@ package meta
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/yuin/goldmark"
@@ -18,13 +19,11 @@ func TestMeta(t *testing.T) {
 			Meta,
 		),
 	)
-	source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-    - markdown
-    - goldmark
----
+	source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 
 # Hello goldmark-meta
 `
@@ -72,13 +71,11 @@ func TestMetaTable(t *testing.T) {
 			),
 		),
 	)
-	source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-    - markdown
-    - goldmark
----
+	source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 
 # Hello goldmark-meta
 `
@@ -98,7 +95,7 @@ Tags:
 <tbody>
 <tr>
 <td>goldmark-meta</td>
-<td>Add YAML metadata to the document</td>
+<td>Add TOML metadata to the document</td>
 <td>[markdown goldmark]</td>
 </tr>
 </tbody>
@@ -114,16 +111,17 @@ func TestMetaError(t *testing.T) {
 		goldmark.WithExtensions(
 			New(WithTable()),
 		),
+		goldmark.WithRendererOptions(
+			renderer.WithNodeRenderers(
+				util.Prioritized(extension.NewTableHTMLRenderer(), 500),
+			),
+		),
 	)
-	source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-  - : {
-  }
-    - markdown
-    - goldmark
----
+	source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = [- "markdown", "goldmark"]
++++
 
 # Hello goldmark-meta
 `
@@ -133,16 +131,13 @@ Tags:
 	if err := markdown.Convert([]byte(source), &buf, parser.WithContext(context)); err != nil {
 		panic(err)
 	}
-	if buf.String() != `Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-  - : {
-  }
-    - markdown
-    - goldmark
-<!-- yaml: line 3: did not find expected key -->
+	if buf.String() != `Title = &quot;goldmark-meta&quot;
+Summary = &quot;Add TOML metadata to the document&quot;
+Tags = [- &quot;markdown&quot;, &quot;goldmark&quot;]
+<!-- toml: line 3 (last key "Tags"): expected a digit but got ' ' -->
 <h1>Hello goldmark-meta</h1>
 ` {
+		fmt.Println(buf.String())
 		t.Error("invalid error output")
 	}
 
@@ -166,15 +161,11 @@ func TestMetaTableWithBlankline(t *testing.T) {
 			),
 		),
 	)
-	source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-
-# comments
-Tags:
-    - markdown
-    - goldmark
----
+	source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 
 # Hello goldmark-meta
 `
@@ -194,7 +185,7 @@ Tags:
 <tbody>
 <tr>
 <td>goldmark-meta</td>
-<td>Add YAML metadata to the document</td>
+<td>Add TOML metadata to the document</td>
 <td>[markdown goldmark]</td>
 </tr>
 </tbody>
@@ -213,13 +204,11 @@ func TestMetaStoreInDocument(t *testing.T) {
 			),
 		),
 	)
-	source := `---
-Title: goldmark-meta
-Summary: Add YAML metadata to the document
-Tags:
-    - markdown
-    - goldmark
----
+	source := `+++
+Title = "goldmark-meta"
+Summary = "Add TOML metadata to the document"
+Tags = ["markdown", "goldmark"]
++++
 `
 
 	document := markdown.Parser().Parse(text.NewReader([]byte(source)))

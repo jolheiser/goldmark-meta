@@ -1,6 +1,6 @@
 // package meta is a extension for the goldmark(http://github.com/yuin/goldmark).
 //
-// This extension parses YAML metadata blocks and store metadata to a
+// This extension parses TOML metadata blocks and store metadata to a
 // parser.Context.
 package meta
 
@@ -8,19 +8,18 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/BurntSushi/toml"
 	"github.com/yuin/goldmark"
 	gast "github.com/yuin/goldmark/ast"
 	east "github.com/yuin/goldmark/extension/ast"
 	"github.com/yuin/goldmark/parser"
 	"github.com/yuin/goldmark/text"
 	"github.com/yuin/goldmark/util"
-
-	"gopkg.in/yaml.v2"
 )
 
 type data struct {
 	Map   map[string]interface{}
-	Items yaml.MapSlice
+	Keys  []string
 	Error error
 	Node  gast.Node
 }
@@ -32,7 +31,7 @@ type Option interface {
 	metaOption()
 }
 
-// Get returns a YAML metadata.
+// Get returns a TOML metadata.
 func Get(pc parser.Context) map[string]interface{} {
 	v := pc.Get(contextKey)
 	if v == nil {
@@ -42,8 +41,8 @@ func Get(pc parser.Context) map[string]interface{} {
 	return d.Map
 }
 
-// TryGet tries to get a YAML metadata.
-// If there are YAML parsing errors, then nil and error are returned
+// TryGet tries to get a TOML metadata.
+// If there are TOML parsing errors, then nil and error are returned
 func TryGet(pc parser.Context) (map[string]interface{}, error) {
 	dtmp := pc.Get(contextKey)
 	if dtmp == nil {
@@ -56,21 +55,21 @@ func TryGet(pc parser.Context) (map[string]interface{}, error) {
 	return d.Map, nil
 }
 
-// GetItems returns a YAML metadata.
+// GetItems returns a TOML metadata.
 // GetItems preserves defined key order.
-func GetItems(pc parser.Context) yaml.MapSlice {
+func GetItems(pc parser.Context) []string {
 	v := pc.Get(contextKey)
 	if v == nil {
 		return nil
 	}
 	d := v.(*data)
-	return d.Items
+	return d.Keys
 }
 
-// TryGetItems returns a YAML metadata.
+// TryGetItems returns a TOML metadata.
 // TryGetItems preserves defined key order.
-// If there are YAML parsing errors, then nil and erro are returned.
-func TryGetItems(pc parser.Context) (yaml.MapSlice, error) {
+// If there are TOML parsing errors, then nil and erro are returned.
+func TryGetItems(pc parser.Context) ([]string, error) {
 	dtmp := pc.Get(contextKey)
 	if dtmp == nil {
 		return nil, nil
@@ -79,15 +78,14 @@ func TryGetItems(pc parser.Context) (yaml.MapSlice, error) {
 	if d.Error != nil {
 		return nil, d.Error
 	}
-	return d.Items, nil
+	return d.Keys, nil
 }
 
-type metaParser struct {
-}
+type metaParser struct{}
 
 var defaultParser = &metaParser{}
 
-// NewParser returns a BlockParser that can parse YAML metadata blocks.
+// NewParser returns a BlockParser that can parse TOML metadata blocks.
 func NewParser() parser.BlockParser {
 	return defaultParser
 }
@@ -95,7 +93,7 @@ func NewParser() parser.BlockParser {
 func isSeparator(line []byte) bool {
 	line = util.TrimRightSpace(util.TrimLeftSpace(line))
 	for i := 0; i < len(line); i++ {
-		if line[i] != '-' {
+		if line[i] != '+' {
 			return false
 		}
 	}
@@ -103,7 +101,7 @@ func isSeparator(line []byte) bool {
 }
 
 func (b *metaParser) Trigger() []byte {
-	return []byte{'-'}
+	return []byte{'+'}
 }
 
 func (b *metaParser) Open(parent gast.Node, reader text.Reader, pc parser.Context) (gast.Node, parser.State) {
@@ -138,17 +136,15 @@ func (b *metaParser) Close(node gast.Node, reader text.Reader, pc parser.Context
 	d := &data{}
 	d.Node = node
 	meta := map[string]interface{}{}
-	if err := yaml.Unmarshal(buf.Bytes(), &meta); err != nil {
+	metadata, err := toml.NewDecoder(&buf).Decode(&meta)
+	if err != nil {
 		d.Error = err
 	} else {
 		d.Map = meta
-	}
-
-	metaMapSlice := yaml.MapSlice{}
-	if err := yaml.Unmarshal(buf.Bytes(), &metaMapSlice); err != nil {
-		d.Error = err
-	} else {
-		d.Items = metaMapSlice
+		d.Keys = make([]string, 0, len(metadata.Keys()))
+		for _, keys := range metadata.Keys() {
+			d.Keys = append(d.Keys, keys[0])
+		}
 	}
 
 	pc.Set(contextKey, d)
@@ -197,7 +193,7 @@ func (o *withTable) SetMetaOption(m *transformerConfig) {
 	m.Table = o.value
 }
 
-// WithTable is a functional option that renders a YAML metadata as a table.
+// WithTable is a functional option that renders a TOML metadata as a table.
 func WithTable() Option {
 	return &withTable{
 		value: true,
@@ -216,7 +212,7 @@ func (o *withStoresInDocument) SetMetaOption(c *transformerConfig) {
 	c.StoresInDocument = o.value
 }
 
-// WithStoresInDocument is a functional option that parser will store YAML meta in ast.Document.Meta().
+// WithStoresInDocument is a functional option that parser will store TOML meta in ast.Document.Meta().
 func WithStoresInDocument() Option {
 	return &withStoresInDocument{
 		value: true,
@@ -262,7 +258,7 @@ func (a *astTransformer) Transform(node *gast.Document, reader text.Reader, pc p
 		row := east.NewTableRow(alignments)
 		for _, item := range meta {
 			cell := east.NewTableCell()
-			cell.AppendChild(cell, gast.NewString([]byte(fmt.Sprintf("%v", item.Key))))
+			cell.AppendChild(cell, gast.NewString([]byte(fmt.Sprintf("%v", item))))
 			row.AppendChild(row, cell)
 		}
 		table.AppendChild(table, east.NewTableHeader(row))
@@ -270,7 +266,7 @@ func (a *astTransformer) Transform(node *gast.Document, reader text.Reader, pc p
 		row = east.NewTableRow(alignments)
 		for _, item := range meta {
 			cell := east.NewTableCell()
-			cell.AppendChild(cell, gast.NewString([]byte(fmt.Sprintf("%v", item.Value))))
+			cell.AppendChild(cell, gast.NewString([]byte(fmt.Sprintf("%v", d.Map[item]))))
 			row.AppendChild(row, cell)
 		}
 		table.AppendChild(table, row)
