@@ -1,4 +1,4 @@
-module github.com/yuin/goldmark-meta
+module github.com/jolheiser/goldmark-meta
 
 go 1.17
 
